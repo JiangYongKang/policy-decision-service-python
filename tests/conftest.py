@@ -50,13 +50,20 @@ def service(store, log) -> PolicyDecisionService:
 
 
 def log_decision(request, result) -> None:
-    """测试日志：打印请求输入、命中策略版本与判定依据。"""
+    """测试日志：打印请求输入、命中策略版本与判定依据（含缺失属性）。"""
+    code = result.reason_code.value if result.reason_code is not None else "-"
     print(
         f"\n[decision-log] request={request} "
         f"policy_version={result.policy_version} "
-        f"decision={result.decision.value} allowed={result.allowed}"
+        f"decision={result.decision.value} reason_code={code} "
+        f"allowed={result.allowed} required_attributes={list(result.required_attributes)}"
     )
     for reason in result.reasons:
         print(f"[decision-log]   reason: {reason}")
     for m in result.matched:
         print(f"[decision-log]   matched: {m.rule_id} ({m.effect.value}) {m.reason}")
+    for miss in result.missing_attributes:
+        print(
+            f"[decision-log]   missing: rule={miss.rule_id} "
+            f"attribute={miss.attribute}"
+        )

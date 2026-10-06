@@ -84,3 +84,48 @@ def test_concurrent_decisions_during_update(store, service, log):
             Decision.ALLOW if rec.result.policy_version == "v1" else Decision.DENY
         )
         assert rec.result.decision is expected
+
+
+def test_missing_attribute_result_pinned_to_single_snapshot(store, service):
+    """缺属性结论也基于单一版本快照：旧快照报缺属性，
+    原子更新为「不再依赖该属性」的新版本后，新评估得到确定结论，
+    两次评估的版本与结论各自自洽、不混版本。"""
+    v_missing = {
+        "version": "v-missing",
+        "policies": [
+            {"id": "allow-all", "effect": "allow",
+             "resource": "doc", "action": "read"},
+            {"id": "deny-cn", "effect": "deny",
+             "resource": "doc", "action": "read",
+             "conditions": {"region": "cn"}},
+        ],
+    }
+    v_simple = {
+        "version": "v-simple",
+        "policies": [
+            {"id": "allow-all", "effect": "allow",
+             "resource": "doc", "action": "read"},
+        ],
+    }
+    store.update(load_bundle(v_missing))
+
+    old_snapshot = store.snapshot()
+    from policy_service.evaluator import evaluate
+
+    req = DecisionRequest(subject="alice", action="read", resource="doc")
+    old_result = evaluate(old_snapshot, req)
+    log_decision(req, old_result)
+    assert old_result.policy_version == "v-missing"
+    assert old_result.decision is Decision.INDETERMINATE
+    assert old_result.reason_code.value == "missing_attributes"
+    assert old_result.required_attributes == ("region",)
+
+    # 原子切换：新版本不再依赖 region
+    store.update(load_bundle(v_simple))
+    new_result = service.decide(req)
+    log_decision(req, new_result)
+    assert new_result.policy_version == "v-simple"
+    assert new_result.decision is Decision.ALLOW
+    # 旧快照对象本身不受更新影响
+    assert old_result.policy_version == "v-missing"
+    assert old_result.required_attributes == ("region",)
