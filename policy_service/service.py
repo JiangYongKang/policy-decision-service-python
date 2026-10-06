@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from .audit import DecisionLog
 from .evaluator import evaluate
-from .models import Decision, DecisionRequest, DecisionResult
+from .models import DecisionRequest, DecisionResult
 from .store import PolicyStore
 
 

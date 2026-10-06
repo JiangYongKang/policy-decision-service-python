@@ -75,6 +75,8 @@ def test_service_keeps_serving_during_update(client):
         "allowed": before["allowed"],
         "reasons": before["reasons"],
         "matched": [],
+        "indeterminate_reason": None,
+        "missing_attributes": (),
     })())
     # 更新期间（此处以连续调用模拟）旧请求已按 v1 完成，新请求按 v2
     client.post("/policies", json={"bundle": {

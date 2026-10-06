@@ -56,6 +56,22 @@ def create_app() -> FastAPI:
                 {"rule_id": m.rule_id, "effect": m.effect.value, "reason": m.reason}
                 for m in result.matched
             ],
+            "indeterminate_reason": (
+                result.indeterminate_reason.value
+                if result.indeterminate_reason is not None
+                else None
+            ),
+            "missing_attributes": [
+                {
+                    "rule_id": entry.rule_id,
+                    "effect": entry.effect.value,
+                    "missing": [
+                        {"key": item.key, "expected": item.expected}
+                        for item in entry.missing
+                    ],
+                }
+                for entry in result.missing_attributes
+            ],
         }
 
     @app.post("/policies")
@@ -95,6 +111,22 @@ def create_app() -> FastAPI:
                 "allowed": r.result.allowed,
                 "policy_version": r.result.policy_version,
                 "reasons": list(r.result.reasons),
+                "indeterminate_reason": (
+                    r.result.indeterminate_reason.value
+                    if r.result.indeterminate_reason is not None
+                    else None
+                ),
+                "missing_attributes": [
+                    {
+                        "rule_id": entry.rule_id,
+                        "effect": entry.effect.value,
+                        "missing": [
+                            {"key": item.key, "expected": item.expected}
+                            for item in entry.missing
+                        ],
+                    }
+                    for entry in r.result.missing_attributes
+                ],
             }
             for r in log.all()
         ]
